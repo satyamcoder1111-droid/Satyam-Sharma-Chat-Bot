@@ -51,7 +51,9 @@ def clean_number(raw: str) -> str:
     return re.sub(r"^\+?(91|971)", "", str(raw))
 
 def is_allowed_number(raw_number: str) -> bool:
-    return clean_number(raw_number) in ALLOWED_NUMBERS
+    cleaned = clean_number(raw_number)
+    print(f"[AUTH CHECK] raw={raw_number} → cleaned={cleaned}, allowed={ALLOWED_NUMBERS}")
+    return cleaned in ALLOWED_NUMBERS
 
 # ─────────────────────────────────────────
 # INTENT CLASSIFIER PROMPT
@@ -146,6 +148,7 @@ def fix_and_parse(raw: str) -> dict:
     raw = re.sub(r'"lookups?\s+stock"', '"lookup_stock"', raw)
     raw = re.sub(r'"needs_products?_lookup"', '"needs_product_lookup"', raw)
     return json.loads(raw)
+
 
 # ─────────────────────────────────────────
 # CLASSIFY MESSAGE VIA GROQ

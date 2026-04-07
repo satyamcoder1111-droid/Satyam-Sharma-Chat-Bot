@@ -97,10 +97,8 @@ INTENT DETECTION RULES:
 
 ---
 LANGUAGE RULE (CRITICAL):
-- Hinglish/Hindi input → reply in Hinglish
-- English input → reply in English
-- Arabic input → reply in Arabic
-- NEVER reply in English if user wrote in Hinglish
+ reply in English
+
 
 ---
 STRICT RULE:

@@ -25,6 +25,13 @@ PHONE_NUMBER_ID  = os.environ.get("PHONE_NUMBER_ID")
 VERIFY_TOKEN     = os.environ.get("VERIFY_TOKEN")
 
 # ─────────────────────────────────────────
+# OGA CRM CONFIG  (from n8n workflow)
+# ─────────────────────────────────────────
+OGA_CRM_BASE_URL      = "https://crm.ogaapps.in"
+OGA_CRM_BEARER_TOKEN  = os.environ.get("OGA_CRM_BEARER_TOKEN")
+OGA_CRM_INSTANCE_NAME = "Delidel Support"   # instanceName used in n8n Send node
+
+# ─────────────────────────────────────────
 # SESSION HISTORY
 # ─────────────────────────────────────────
 session_history: dict = {}
@@ -54,6 +61,56 @@ def is_allowed_number(raw_number: str) -> bool:
     cleaned = clean_number(raw_number)
     print(f"[AUTH CHECK] raw={raw_number} → cleaned={cleaned}, allowed={ALLOWED_NUMBERS}")
     return cleaned in ALLOWED_NUMBERS
+
+# ─────────────────────────────────────────
+# CRM FUNCTIONS  (mirrors n8n nodes)
+# ─────────────────────────────────────────
+
+def forward_raw_to_crm(raw_body: dict):
+    """
+    Mirrors the n8n 'HTTP Request' node:
+    POST https://crm.ogaapps.in/api/webhook/evolution
+    Body: raw webhook JSON (passthrough)
+    Runs fire-and-forget — errors are logged but never block the reply.
+    """
+    url = f"{OGA_CRM_BASE_URL}/api/webhook/evolution"
+    try:
+        res = requests.post(
+            url,
+            json=raw_body,
+            headers={"Content-Type": "application/json"},
+            timeout=10
+        )
+        print(f"[CRM PASSTHROUGH] {res.status_code} → {res.text[:200]}")
+    except Exception as e:
+        print(f"[CRM PASSTHROUGH ERROR] {e}")
+
+
+def send_reply_via_crm(sender_number: str, message: str):
+    """
+    Mirrors the n8n 'Send Reply via OGA CRM' node:
+    POST https://crm.ogaapps.in/api/v1/send
+    Auth: Bearer token
+    Body: { instanceName, number, type, message }
+    """
+    url = f"{OGA_CRM_BASE_URL}/api/v1/send"
+    # Strip leading + just like n8n: String($json.sender_number).replace(/^\+/, '')
+    clean_to = str(sender_number).lstrip("+").strip()
+    payload = {
+        "instanceName": OGA_CRM_INSTANCE_NAME,
+        "number":       clean_to,
+        "type":         "text",
+        "message":      str(message).strip()
+    }
+    headers = {
+        "Authorization": f"Bearer {OGA_CRM_BEARER_TOKEN}",
+        "Content-Type":  "application/json"
+    }
+    try:
+        res = requests.post(url, json=payload, headers=headers, timeout=10)
+        print(f"[CRM SEND REPLY] {res.status_code} → {res.text[:200]}")
+    except Exception as e:
+        print(f"[CRM SEND REPLY ERROR] {e}")
 
 # ─────────────────────────────────────────
 # INTENT CLASSIFIER PROMPT
@@ -95,10 +152,16 @@ INTENT DETECTION RULES:
 
 7. GENERAL CHAT → all flags false, short friendly reply
 
+8. CONTEXT CARRY-OVER (brand variant)
+   If user mentions a brand/variant (e.g. "Sadia", "Lay's", "PG") without a new product name
+   → combine last_discussed_product + brand as the search query
+   Example: last_discussed_product = "Fries", user says "Sadia ka price"
+   → product_name = "Fries Sadia", lookup_price = true
+
 ---
 LANGUAGE RULE (CRITICAL):
- reply in English
-
+- English input → reply in English
+- Arabic input → reply in Arabic
 
 ---
 STRICT RULE:
@@ -146,7 +209,6 @@ def fix_and_parse(raw: str) -> dict:
     raw = re.sub(r'"lookups?\s+stock"', '"lookup_stock"', raw)
     raw = re.sub(r'"needs_products?_lookup"', '"needs_product_lookup"', raw)
     return json.loads(raw)
-
 
 # ─────────────────────────────────────────
 # CLASSIFY MESSAGE VIA GROQ
@@ -265,7 +327,7 @@ def format_order_reply(intent: dict, customer_name: str = "") -> str:
     )
 
 # ─────────────────────────────────────────
-# SEND WHATSAPP MESSAGE
+# SEND WHATSAPP MESSAGE  (kept for fallback / direct WA API use)
 # ─────────────────────────────────────────
 def send_whatsapp_message(to: str, message: str):
     url = f"https://graph.facebook.com/v19.0/{PHONE_NUMBER_ID}/messages"
@@ -286,7 +348,7 @@ def send_whatsapp_message(to: str, message: str):
         print(f"[WA SEND ERROR] {e}")
 
 # ─────────────────────────────────────────
-# CORE CHAT LOGIC (shared by /chat and /webhook)
+# CORE CHAT LOGIC
 # ─────────────────────────────────────────
 def process_message(user_input: str, sender_number: str) -> str:
     number_key   = clean_number(sender_number)
@@ -365,6 +427,9 @@ def receive_webhook():
     data = request.get_json()
     print("[WEBHOOK IN]", json.dumps(data, indent=2))
 
+    # ── Step 1: Forward raw body to CRM immediately (mirrors n8n 'HTTP Request' node)
+    forward_raw_to_crm(data)
+
     try:
         entry   = data["entry"][0]
         changes = entry["changes"][0]["value"]
@@ -388,9 +453,11 @@ def receive_webhook():
             print(f"[BLOCKED] {sender}")
             return "OK", 200
 
-        # Process and reply
+        # ── Step 2: Generate bot reply
         reply = process_message(user_input, sender)
-        send_whatsapp_message(sender, reply)
+
+        # ── Step 3: Send reply via OGA CRM (mirrors n8n 'Send Reply via OGA CRM' node)
+        send_reply_via_crm(sender, reply)
 
     except Exception as e:
         print(f"[WEBHOOK ERROR] {e}")

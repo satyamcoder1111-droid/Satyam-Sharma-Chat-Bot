@@ -312,7 +312,6 @@ def format_product_reply(api_data: dict, intent: dict) -> str:
 
         lines.append(entry)
 
-    lines.append("\n━━━━━━━━━━━━━━━━")
     lines.append("Need anything else? Feel free to ask! 😊")
 
     return "\n\n".join(lines)

@@ -276,31 +276,46 @@ def format_product_reply(api_data: dict, intent: dict) -> str:
     products      = api_data.get("products", [])
     customer_name = api_data.get("customer_name", "")
     first_name    = customer_name.split()[0] if customer_name else ""
-    greeting      = f"Hi {first_name}! " if first_name else ""
+    greeting      = f"Hi {first_name}! 👋" if first_name else "Hi there! 👋"
 
     if not products:
         pname = intent.get("product_name", "that product")
-        return (f"{greeting}\"{pname}\" nahi mila. "
-                "Spelling check karein ya exact product name share karein?")
+        return (
+            f"{greeting}\n\n"
+            f"Sorry, I couldn't find *\"{pname}\"* in our catalog. 😕\n\n"
+            "Could you try:\n"
+            "• Checking the spelling\n"
+            "• Using a shorter or different product name\n\n"
+            "I'm happy to help you find the right product! 🙌"
+        )
 
-    lines = [f"Hey {customer_name or 'there'}, yeh raha:\n"]
+    header = f"Hey *{customer_name}*! Here's what I found:\n" if customer_name else "Here's what I found:\n"
+    lines  = [header]
+
     for i, p in enumerate(products, start=1):
         name  = p.get("name", "Unknown")
         price = float(p.get("price", 0) or 0)
         stock = int(p.get("stock", 0) or 0)
+
         entry = f"*{i}. {name}*"
+
         if intent.get("lookup_price"):
-            entry += f"\n💰 AED {price:.2f}" if price > 0 else "\n💰 Price: Contact us"
+            entry += f"\n   💰 Price: AED {price:.2f}" if price > 0 else "\n   💰 Price: Please contact us"
+
         if intent.get("lookup_stock"):
             if stock > 10:
-                entry += "\n✅ In stock"
+                entry += "\n   ✅ In Stock"
             elif stock > 0:
-                entry += f"\n⚠️ Low stock ({stock} left)"
+                entry += f"\n   ⚠️ Low Stock — only {stock} left!"
             else:
-                entry += "\n❌ Out of stock"
+                entry += "\n   ❌ Out of Stock"
+
         lines.append(entry)
-    lines.append("\n👉 Kuch aur chahiye?")
-    return "\n".join(lines)
+
+    lines.append("\n━━━━━━━━━━━━━━━━")
+    lines.append("Need anything else? Feel free to ask! 😊")
+
+    return "\n\n".join(lines)
 
 # ─────────────────────────────────────────
 # FORMAT ORDER REPLY

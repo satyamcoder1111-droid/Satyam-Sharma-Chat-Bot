@@ -300,7 +300,7 @@ def format_product_reply(api_data: dict, intent: dict) -> str:
         entry = f"*{i}. {name}*"
 
         if intent.get("lookup_price"):
-            entry += f"\n   💰 Price: AED {price:.2f}" if price > 0 else "\n   💰 Price: Please contact us"
+            entry += f"\n   Carton Price: AED {price:.2f}" if price > 0 else "\n   💰 Price: Please contact us"
 
         if intent.get("lookup_stock"):
             if stock > 10:

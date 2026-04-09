@@ -87,6 +87,7 @@ def forward_raw_to_crm(raw_body: dict):
             headers={"Content-Type": "application/json"},
             timeout=10
         )
+        print(res)
         print(f"[CRM PASSTHROUGH] {res.status_code} → {res.text[:200]}")
     except Exception as e:
         print(f"[CRM PASSTHROUGH ERROR] {e}")

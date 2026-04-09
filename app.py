@@ -70,21 +70,26 @@ def forward_raw_to_crm(raw_body: dict):
     """
     Mirrors the n8n 'HTTP Request' node:
     POST https://crm.ogaapps.in/api/webhook/evolution
-    Body: raw webhook JSON (passthrough)
-    Runs fire-and-forget — errors are logged but never block the reply.
+    Body: raw_body["body"] — just the inner Evolution event payload,
+    matching n8n's JSON.stringify($json.body) behaviour.
     """
     url = f"{OGA_CRM_BASE_URL}/api/webhook/evolution"
+    
+    # n8n sends $json.body — the nested "body" key inside the webhook payload
+    # Your Flask /webhook receives the full n8n structure, so extract .get("body")
+    # If called from the direct WhatsApp webhook, fall back to raw_body itself
+    payload_to_forward = raw_body.get("body", raw_body)
+    
     try:
         res = requests.post(
             url,
-            json=raw_body,
+            json=payload_to_forward,
             headers={"Content-Type": "application/json"},
             timeout=10
         )
         print(f"[CRM PASSTHROUGH] {res.status_code} → {res.text[:200]}")
     except Exception as e:
         print(f"[CRM PASSTHROUGH ERROR] {e}")
-
 
 def send_reply_via_crm(sender_number: str, message: str):
     """

@@ -434,6 +434,8 @@ def receive_webhook():
     print("[WEBHOOK IN]", json.dumps(data, indent=2))
 
     # ── Step 1: Forward raw body to CRM immediately (mirrors n8n 'HTTP Request' node)
+    print(data)
+    print("hello")
     forward_raw_to_crm(data)
 
     try:

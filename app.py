@@ -147,10 +147,11 @@ INTENT DETECTION RULES:
    - If quantity missing → direct_order = false, general_reply = ask for quantity in user's language
 
 5. PRODUCT NAME ONLY (no price/stock/order/quantity)
-   → needs_product_lookup = false, all flags = false
-   → general_reply = ask if they want price, stock, or order (match user language)
-   Hinglish example: "Fries! 😊 Price dekhni hai, stock check karni hai, ya order karna hai?"
-   English example:  "Got it! Price check, availability, or place an order?"
+→ needs_product_lookup = false
+→ lookup_price = false
+→ lookup_stock = false
+→ direct_order = false
+→ general_reply = "👍 What would you like to check for *{{product_name}}*?\n1️⃣ Price\n2️⃣ Availability\n3️⃣ Place an order\n\n👉 To order: send product name + quantity\nExample: Fries 5 cartons""
 
 6. CONTEXT CARRY-OVER
    If user says only "price", "available", "haan", "yes", "order karna hai" with no product name
@@ -158,7 +159,7 @@ INTENT DETECTION RULES:
 
 7. GENERAL CHAT → all flags false, short friendly reply
 
-8. CONTEXT CARRY-OVER (brand variant)
+8  CONTEXT CARRY-OVER
    If user mentions a brand/variant (e.g. "Sadia", "Lay's", "PG") without a new product name
    → combine last_discussed_product + brand as the search query
    Example: last_discussed_product = "Fries", user says "Sadia ka price"
@@ -184,6 +185,21 @@ Return ONLY this JSON, no other text:
   "product_name": "",
   "quantity": "",
   "general_reply": ""
+}
+"""
+
+# ─────────────────────────────────────────
+# SAFE FALLBACK INTENT
+# ─────────────────────────────────────────
+SAFE_INTENT = {
+    "needs_product_lookup": False,
+    "lookup_price": False,
+    "lookup_stock": False,
+    "direct_order": False,
+    "product_name": "",
+    "quantity": "",
+      "general_reply": "I'm sorry, I didn't quite understand that. Could you please rephrase your request?"
+
 }
 """
 

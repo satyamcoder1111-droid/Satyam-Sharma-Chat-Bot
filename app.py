@@ -332,6 +332,45 @@ def format_order_reply(intent: dict, customer_name: str = "") -> str:
         "Kuch aur chahiye?"
     )
 
+def transform_to_whatsapp_format(data):
+    raw = data.get("body", {}).get("data", {})
+
+    # Extract sender
+    sender = raw.get("key", {}).get("remoteJid", "")
+    sender = sender.replace("@s.whatsapp.net", "")
+
+    # Extract message text
+    message = (
+        raw.get("message", {}).get("conversation")
+        or raw.get("message", {}).get("extendedTextMessage", {}).get("text")
+        or ""
+    )
+
+    # Build Flask-compatible structure
+    transformed = {
+        "entry": [
+            {
+                "changes": [
+                    {
+                        "value": {
+                            "messages": [
+                                {
+                                    "from": sender,
+                                    "type": "text",
+                                    "text": {
+                                        "body": message
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+
+    return transformed
+
 # ─────────────────────────────────────────
 # SEND WHATSAPP MESSAGE  (kept for fallback / direct WA API use)
 # ─────────────────────────────────────────
@@ -437,7 +476,8 @@ def receive_webhook():
     print(data)
     print("hello")
     forward_raw_to_crm(data)
-
+    data = transform_to_whatsapp_format(data)
+    
     try:
         entry   = data["entry"][0]
         changes = entry["changes"][0]["value"]

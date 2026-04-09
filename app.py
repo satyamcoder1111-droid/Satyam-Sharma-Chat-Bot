@@ -188,19 +188,6 @@ SAFE_INTENT = {
 }
 
 # ─────────────────────────────────────────
-# SAFE FALLBACK INTENT
-# ─────────────────────────────────────────
-SAFE_INTENT = {
-    "needs_product_lookup": False,
-    "lookup_price": False,
-    "lookup_stock": False,
-    "direct_order": False,
-    "product_name": "",
-    "quantity": "",
-    "general_reply": "Samajh nahi aaya, zara dobara batao? 😊"
-}
-
-# ─────────────────────────────────────────
 # JSON HELPERS
 # ─────────────────────────────────────────
 def extract_json(text: str) -> str:

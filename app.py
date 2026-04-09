@@ -328,9 +328,9 @@ def format_order_reply(intent: dict, customer_name: str = "") -> str:
     order_line = f"*{order_line}*" if order_line else "your order"
     return (
         f"{greeting}Thank you! ✅\n"
-        f"Order receive hua: {order_line}\n"
-        "Jald confirm karenge. 😊\n\n"
-        "Kuch aur chahiye?"
+        f"Order received \n"
+        "will confirm shortly. 😊\n\n"
+        "Any thing else needed feel free to ask"
     )
 
 def transform_to_whatsapp_format(data):

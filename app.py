@@ -124,56 +124,43 @@ def send_reply_via_crm(sender_number: str, message: str):
 CLASSIFIER_PROMPT = """
 You are a smart message classifier for a WhatsApp sales assistant.
 Return ONLY a valid JSON object — no extra text, no markdown fences, no explanation.
-
 ---
 INTENT DETECTION RULES:
-
 1. PRICE CHECK
-   Trigger: price, cost, rate, kitne ka, kya price hai, how much, daam, rate kya hai
+   Trigger: price, cost, rate, how much, what's the price, what's the rate
    → lookup_price = true, needs_product_lookup = true
-
 2. STOCK CHECK
-   Trigger: available, in stock, hai kya, milega, mil jayega, stock, available hai
+   Trigger: available, in stock, do you have it, can I get it, stock, is it available
    → lookup_stock = true, needs_product_lookup = true
-
 3. PRICE + STOCK BOTH
    → lookup_price = true, lookup_stock = true, needs_product_lookup = true
-
 4. DIRECT ORDER
-   Trigger: "bhej do", "de do", "lagao", "order", "chahiye" WITH a number quantity
+   Trigger: "send it", "give me", "add it", "order", "I want/need" WITH a number quantity
    OR product name + number + unit (ctns/box/pcs/kg/cartons/pieces)
-   Examples: "fries 22 ctns", "10 box lays bhej do"
+   Examples: "fries 22 ctns", "send me 10 box lays"
    - If quantity present → direct_order = true, needs_product_lookup = false, general_reply = ""
    - If quantity missing → direct_order = false, general_reply = ask for quantity in user's language
-
 5. PRODUCT NAME ONLY (no price/stock/order/quantity)
    → needs_product_lookup = false, all flags = false
    → general_reply = ask if they want price, stock, or order (match user language)
-   Hinglish example: "Fries! 😊 Price dekhni hai, stock check karni hai, ya order karna hai?"
-   English example:  "Got it! Price check, availability, or place an order?"
-
+   Example: "Fries! 😊 Would you like to check the price, check availability, or place an order?"
 6. CONTEXT CARRY-OVER
-   If user says only "price", "available", "haan", "yes", "order karna hai" with no product name
+   If user says only "price", "available", "yes", "I want to order" with no product name
    → use last_discussed_product as product_name, apply matching rule
-
 7. GENERAL CHAT → all flags false, short friendly reply
-
 8. CONTEXT CARRY-OVER (brand variant)
    If user mentions a brand/variant (e.g. "Sadia", "Lay's", "PG") without a new product name
    → combine last_discussed_product + brand as the search query
-   Example: last_discussed_product = "Fries", user says "Sadia ka price"
+   Example: last_discussed_product = "Fries", user says "Sadia price"
    → product_name = "Fries Sadia", lookup_price = true
-
 ---
 LANGUAGE RULE (CRITICAL):
 - English input → reply in English
 - Arabic input → reply in Arabic
-
 ---
 STRICT RULE:
 If lookup_price=true OR lookup_stock=true → needs_product_lookup MUST be true.
 Never output lookup_price/lookup_stock=true with needs_product_lookup=false.
-
 ---
 Return ONLY this JSON, no other text:
 {
@@ -186,6 +173,19 @@ Return ONLY this JSON, no other text:
   "general_reply": ""
 }
 """
+
+# ─────────────────────────────────────────
+# SAFE FALLBACK INTENT
+# ─────────────────────────────────────────
+SAFE_INTENT = {
+    "needs_product_lookup": False,
+    "lookup_price": False,
+    "lookup_stock": False,
+    "direct_order": False,
+    "product_name": "",
+    "quantity": "",
+    "general_reply": "Sorry, I didn't quite understand that. Could you please repeat? 😊"
+}
 
 # ─────────────────────────────────────────
 # SAFE FALLBACK INTENT

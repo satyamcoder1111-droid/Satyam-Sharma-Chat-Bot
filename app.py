@@ -52,6 +52,34 @@ def get_last_product(number: str) -> str:
     return ""
 
 # ─────────────────────────────────────────
+# MULTI PRODUCT DIRECT ORDER DETECTION
+# ─────────────────────────────────────────
+def is_multi_product_order(user_input: str) -> bool:
+    lines = user_input.strip().split("\n")
+    
+    count = 0
+    for line in lines:
+        line = line.lower().strip()
+        if not line:
+            continue
+
+        # Pattern 1: number with * (e.g., chk1100*2)
+        if re.search(r"\*\d+", line):
+            count += 1
+            continue
+
+        # Pattern 2: quantity + unit (1 ctn, 2 box, etc.)
+        if re.search(r"\b\d+\s*(ctn|box|pcs|kg|carton|pieces|ctns|boxes)\b", line):
+            count += 1
+            continue
+
+        # Pattern 3: product name + any number (fallback)
+        if re.search(r"[a-zA-Z].*\d+|\d+.*[a-zA-Z]", line):
+            count += 1
+
+    return count >= 2
+
+# ─────────────────────────────────────────
 # NUMBER UTILS
 # ─────────────────────────────────────────
 def clean_number(raw: str) -> str:
@@ -400,6 +428,10 @@ def process_message(user_input: str, sender_number: str) -> str:
     number_key   = clean_number(sender_number)
     last_product = get_last_product(number_key)
     intent       = classify_message(user_input, last_product)
+    if is_multi_product_order(user_input):
+        reply = "Thank you for your order 😊 will confirm it shortly"
+        save_to_session(number_key, user_input, "", reply)
+        return reply
 
     if not intent.get("product_name") and last_product:
         if intent.get("needs_product_lookup") or intent.get("direct_order"):

@@ -300,14 +300,28 @@ def get_product_data(product_name: str, sender_number: str) -> dict:
 # ─────────────────────────────────────────
 # FORMAT PRODUCT REPLY
 # ─────────────────────────────────────────
+def is_relevant_product(product_name: str, search_query: str) -> bool:
+    """Keep only products where ALL query words appear in the product name."""
+    query_words = search_query.lower().split()
+    product_lower = product_name.lower()
+    return all(word in product_lower for word in query_words)
+
 def format_product_reply(api_data: dict, intent: dict) -> str:
-    products      = api_data.get("products", [])
+    all_products  = api_data.get("products", [])
     customer_name = api_data.get("customer_name", "")
-    first_name    = customer_name.split()[0] if customer_name else ""
-    greeting      = f"Hi {first_name}! 👋" if first_name else "Hi there! 👋"
+    search_query  = intent.get("product_name", "")
+
+    # ── FILTER: only keep products that match the search query ──
+    products = [
+        p for p in all_products
+        if is_relevant_product(p.get("name", ""), search_query)
+    ] if search_query else all_products
+
+    first_name = customer_name.split()[0] if customer_name else ""
+    greeting   = f"Hi {first_name}! 👋" if first_name else "Hi there! 👋"
 
     if not products:
-        pname = intent.get("product_name", "that product")
+        pname = search_query or "that product"
         return (
             f"{greeting}\n\n"
             f"Sorry, I couldn't find *\"{pname}\"* in our catalog. 😕\n\n"
@@ -341,9 +355,7 @@ def format_product_reply(api_data: dict, intent: dict) -> str:
         lines.append(entry)
 
     lines.append("Need anything else? Feel free to ask! 😊")
-
     return "\n\n".join(lines)
-
 # ─────────────────────────────────────────
 # FORMAT ORDER REPLY
 # ─────────────────────────────────────────
@@ -429,15 +441,31 @@ def process_message(user_input: str, sender_number: str) -> str:
     number_key   = clean_number(sender_number)
     last_product = get_last_product(number_key)
     intent       = classify_message(user_input, last_product)
+
     if is_multi_product_order(user_input):
         reply = "Thank you for your order 😊 will confirm it shortly"
         save_to_session(number_key, user_input, "", reply)
         return reply
 
+    # Carry-over: inject last product if missing
     if not intent.get("product_name") and last_product:
         if intent.get("needs_product_lookup") or intent.get("direct_order"):
             intent["product_name"] = last_product
             print(f"[CARRY-OVER] injected: {last_product}")
+
+    # ── NEW: Handle "place an order" with no quantity yet ──
+    user_lower = user_input.lower().strip()
+    order_triggers = ["place an order", "place order", "i want to order", "order karna hai", "order chahiye"]
+    if any(t in user_lower for t in order_triggers) and not intent.get("quantity"):
+        if last_product:
+            reply = (
+                f"Sure! 😊 How many cartons of *{last_product}* would you like?\n"
+                "Just send the quantity and I'll confirm your order right away!"
+            )
+        else:
+            reply = "Of course! 😊 What product would you like to order, and how many cartons?"
+        save_to_session(number_key, user_input, last_product, reply)
+        return reply
 
     print("\n── FINAL INTENT ──")
     print(json.dumps(intent, indent=2))

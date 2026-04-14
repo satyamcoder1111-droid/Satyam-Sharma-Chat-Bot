@@ -437,6 +437,9 @@ def send_whatsapp_message(to: str, message: str):
 # ─────────────────────────────────────────
 # CORE CHAT LOGIC
 # ─────────────────────────────────────────
+# ─────────────────────────────────────────
+# CORE CHAT LOGIC
+# ─────────────────────────────────────────
 def process_message(user_input: str, sender_number: str) -> str:
     number_key   = clean_number(sender_number)
     last_product = get_last_product(number_key)
@@ -444,8 +447,17 @@ def process_message(user_input: str, sender_number: str) -> str:
     intent       = classify_message(user_input, last_product)
 
     # ── 1. Greeting ──
+    ORDER_KEYWORDS = [
+        "deliver", "order", "send", "box", "ctn", "ctns", "carton", "cartons",
+        "pcs", "kg", "pls", "please", "want", "need", "price", "rate", "cost",
+        "available", "stock", "today", "tomorrow", "asap", "urgent"
+    ]
+
     greet_triggers = ["hi", "hello", "hey", "hii", "helo", "salam", "assalam", "good morning", "good evening"]
-    if any(user_lower == t or user_lower.startswith(t) for t in greet_triggers):
+    is_greeting    = any(user_lower == t or user_lower.startswith(t) for t in greet_triggers)
+    has_order_content = any(kw in user_lower for kw in ORDER_KEYWORDS)
+
+    if is_greeting and not has_order_content:
         customer_name = ""
         try:
             customer_name = get_product_data("", sender_number).get("customer_name", "")

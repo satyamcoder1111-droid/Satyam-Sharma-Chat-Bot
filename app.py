@@ -331,7 +331,7 @@ def format_product_reply(api_data: dict, intent: dict) -> str:
             "I'm happy to help you find the right product! 🙌"
         )
 
-    header = f"Hey *{customer_name}*! Here's what I found:\n" if customer_name else "Here's what I found:\n"
+    header = f"Hey *{customer_name}*! Here's what have for you:\n" if customer_name else "Here's what have for you:\n"
     lines  = [header]
 
     for i, p in enumerate(products, start=1):

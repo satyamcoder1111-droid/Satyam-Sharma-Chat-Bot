@@ -440,6 +440,7 @@ def send_whatsapp_message(to: str, message: str):
 def process_message(user_input: str, sender_number: str) -> str:
     number_key   = clean_number(sender_number)
     last_product = get_last_product(number_key)
+    user_lower   = user_input.lower().strip()          # ← MOVED HERE (line 3)
     intent       = classify_message(user_input, last_product)
     
     greet_triggers = ["hi", "hello", "hey", "hii", "helo", "salam", "assalam", "good morning", "good evening"]
@@ -471,14 +472,11 @@ def process_message(user_input: str, sender_number: str) -> str:
         save_to_session(number_key, user_input, "", reply)
         return reply
 
-    # Carry-over: inject last product if missing
     if not intent.get("product_name") and last_product:
         if intent.get("needs_product_lookup") or intent.get("direct_order"):
             intent["product_name"] = last_product
             print(f"[CARRY-OVER] injected: {last_product}")
 
-    # ── NEW: Handle "place an order" with no quantity yet ──
-    user_lower = user_input.lower().strip()
     order_triggers = ["place an order", "place order", "i want to order", "order karna hai", "order chahiye"]
     if any(t in user_lower for t in order_triggers) and not intent.get("quantity"):
         if last_product:
@@ -510,7 +508,7 @@ def process_message(user_input: str, sender_number: str) -> str:
         reply    = format_product_reply(api_data, intent)
 
     else:
-        reply = intent.get("general_reply") or "Kya main aapki madad kar sakta hoon?"
+        reply = intent.get("general_reply") or "Any Other Help?"
 
     save_to_session(number_key, user_input, intent.get("product_name", ""), reply)
     return reply

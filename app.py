@@ -14,7 +14,7 @@ import os
 PHONE_NUMBER     = "9759145356"
 ALLOWED_NUMBERS  = ["9354906215", "9759145356", "7988149282"]
 
-PRODUCT_API_URL  = "https://stguae.delidel.in/module/ogaverloopapi/ogachatbotapi"
+PRODUCT_API_URL  = "https://uae.delidel.in/module/ogachatbotapi/ogachatbotapi"
 API_KEY          = os.environ.get("API_KEY")
 
 GROQ_API_KEY     = os.environ.get("GROQ_API_KEY")

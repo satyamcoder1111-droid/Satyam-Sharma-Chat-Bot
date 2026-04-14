@@ -440,9 +440,10 @@ def send_whatsapp_message(to: str, message: str):
 def process_message(user_input: str, sender_number: str) -> str:
     number_key   = clean_number(sender_number)
     last_product = get_last_product(number_key)
-    user_lower   = user_input.lower().strip()          # ← MOVED HERE (line 3)
+    user_lower   = user_input.lower().strip()
     intent       = classify_message(user_input, last_product)
-    
+
+    # ── 1. Greeting ──
     greet_triggers = ["hi", "hello", "hey", "hii", "helo", "salam", "assalam", "good morning", "good evening"]
     if any(user_lower == t or user_lower.startswith(t) for t in greet_triggers):
         customer_name = ""
@@ -450,7 +451,7 @@ def process_message(user_input: str, sender_number: str) -> str:
             customer_name = get_product_data("", sender_number).get("customer_name", "")
         except Exception:
             pass
-        first_name = customer_name.split()[0] if customer_name else ""
+        first_name    = customer_name.split()[0] if customer_name else ""
         greeting_name = f" {first_name}" if first_name else ""
         reply = (
             f"Hello{greeting_name}! 👋 Welcome to *Delidel*!\n\n"
@@ -467,31 +468,44 @@ def process_message(user_input: str, sender_number: str) -> str:
         save_to_session(number_key, user_input, "", reply)
         return reply
 
+    # ── 2. Multi-product order ──
     if is_multi_product_order(user_input):
         reply = "Thank you for your order 😊 will confirm it shortly"
         save_to_session(number_key, user_input, "", reply)
         return reply
 
+    # ── 3. Carry-over: inject last product if missing ──
     if not intent.get("product_name") and last_product:
         if intent.get("needs_product_lookup") or intent.get("direct_order"):
             intent["product_name"] = last_product
             print(f"[CARRY-OVER] injected: {last_product}")
 
-    order_triggers = ["place an order", "place order", "i want to order", "order karna hai", "order chahiye"]
-    if any(t in user_lower for t in order_triggers) and not intent.get("quantity"):
+    # ── 4. Order intent with no quantity yet ──
+    order_triggers = [
+        "place an order", "place order", "i want to order", "i would like to order",
+        "order karna hai", "order chahiye", "order", "i want", "send it", "de do", "bhejo"
+    ]
+    if (
+        any(t in user_lower for t in order_triggers)
+        and not intent.get("quantity")
+        and not intent.get("direct_order")
+    ):
         if last_product:
-            reply = (
-                f"Sure! 😊 How many cartons of *{last_product}* would you like?\n"
-                "Just send the quantity and I'll confirm your order right away!"
-            )
+            replies = [
+                f"Great choice! 😊 How many cartons of *{last_product}* would you like?",
+                f"Sure! How many cartons of *{last_product}* should I add? 🛒",
+                f"Perfect! Just tell me the quantity for *{last_product}* and I'll confirm right away! 📦",
+            ]
+            reply = random.choice(replies)
         else:
-            reply = "Of course! 😊 What product would you like to order, and how many cartons?"
+            reply = "Of course! 😊 Which product would you like to order, and how many cartons?"
         save_to_session(number_key, user_input, last_product, reply)
         return reply
 
     print("\n── FINAL INTENT ──")
     print(json.dumps(intent, indent=2))
 
+    # ── 5. Direct order ──
     if intent.get("direct_order"):
         customer_name = ""
         try:
@@ -502,13 +516,15 @@ def process_message(user_input: str, sender_number: str) -> str:
             pass
         reply = format_order_reply(intent, customer_name)
 
+    # ── 6. Product lookup (price / stock) ──
     elif intent.get("needs_product_lookup"):
         product_to_look = intent.get("product_name") or user_input
         api_data = get_product_data(product_to_look, sender_number)
         reply    = format_product_reply(api_data, intent)
 
+    # ── 7. General reply ──
     else:
-        reply = intent.get("general_reply") or "Any Other Help?"
+        reply = intent.get("general_reply") or "Any other help? 😊"
 
     save_to_session(number_key, user_input, intent.get("product_name", ""), reply)
     return reply

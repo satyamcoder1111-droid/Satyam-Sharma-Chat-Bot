@@ -362,7 +362,8 @@ def format_order_reply(intent: dict, customer_name: str = "") -> str:
     )
 
 def transform_to_whatsapp_format(data):
-    raw = data.get("body", {}).get("data", {})
+    # Evolution API sends data directly, not nested under "body"
+    raw = data.get("data", {})
 
     # Extract sender
     sender = raw.get("key", {}).get("remoteJid", "")

@@ -441,6 +441,30 @@ def process_message(user_input: str, sender_number: str) -> str:
     number_key   = clean_number(sender_number)
     last_product = get_last_product(number_key)
     intent       = classify_message(user_input, last_product)
+    
+    greet_triggers = ["hi", "hello", "hey", "hii", "helo", "salam", "assalam", "good morning", "good evening"]
+    if any(user_lower == t or user_lower.startswith(t) for t in greet_triggers):
+        customer_name = ""
+        try:
+            customer_name = get_product_data("", sender_number).get("customer_name", "")
+        except Exception:
+            pass
+        first_name = customer_name.split()[0] if customer_name else ""
+        greeting_name = f" {first_name}" if first_name else ""
+        reply = (
+            f"Hello{greeting_name}! 👋 Welcome to *Delidel*!\n\n"
+            "I'm here to assist you with:\n\n"
+            "🔍 *Check Price* — e.g.\n"
+            "   _French Fries 9mm price_\n\n"
+            "📦 *Check Availability* — e.g.\n"
+            "   _Cooking Cream available?_\n\n"
+            "🛒 *Place an Order* — e.g.\n"
+            "   _Chicken Burger 10 ctns_\n"
+            "   _Lays Classic 5 packs_\n\n"
+            "Just type your product and I'll take care of the rest! 😊"
+        )
+        save_to_session(number_key, user_input, "", reply)
+        return reply
 
     if is_multi_product_order(user_input):
         reply = "Thank you for your order 😊 will confirm it shortly"

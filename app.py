@@ -587,6 +587,7 @@ def receive_webhook():
     # ── Step 1: Forward raw body to CRM immediately (mirrors n8n 'HTTP Request' node)
     print(data)
     print("hello")
+    print(data)
     forward_raw_to_crm(data)
     data = transform_to_whatsapp_format(data)
     
